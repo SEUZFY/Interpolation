@@ -17,6 +17,7 @@ import startinpy
 #-- from the standard Python library and allowed external library
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt # external library for visualisation(developing)
+import math
 #-----
 
 
@@ -78,7 +79,6 @@ def is_in_hull(list_pts_3d):
         plt.plot(points[simplex, 0], points[simplex, 1])
 
     for p in random_points:
-        print(p)
         point_is_in_hull = point_in_hull(p, hull)
         marker = 'd' if point_is_in_hull else 'x'
         #color = 'g' if point_is_in_hull else 'm'
@@ -106,6 +106,39 @@ def bounding_box(list_pts_3d):
     #plt.show()
 
 
+def get_size(list_pts_3d, jparams):
+    """
+    Function that gets the rows and cols of output raster.
+    Input:
+        list_pts_3d: the list of the input points (in 3D)
+        jparams    : the parameters of the input for specific method
+    Return:
+        (nrows,ncols)
+    """
+    lowleft = bounding_box(list_pts_3d)[0]
+    upright = bounding_box(list_pts_3d)[1]
+    cellsize = jparams['cellsize'] # get cellsize from the json file
+    cal_row = (upright[0]-lowleft[0])/cellsize # x-axis
+    cal_col = (upright[1]-lowleft[1])/cellsize # y-axis
+    nrows = math.ceil(cal_row) # round-up
+    ncols = math.ceil(cal_col) # round-up
+    return (nrows,ncols)
+
+
+def rowcol_to_xy(cur_row, cur_col, lowleft, nrows, cellsize):
+    """
+    Function that converts the row-col coordinate to xy-center coordinate.
+    Input:
+        
+        
+    Return:
+        the center coordinate of the cell: (x,y)
+    """
+    x = lowleft[0] + (cur_col+0.5)*cellsize
+    y = lowleft[1] + (nrows-cur_row-0.5)*cellsize
+    return (x,y)
+
+
 def nn_interpolation(list_pts_3d, jparams):
     """
     !!! TO BE COMPLETED !!!
@@ -128,8 +161,17 @@ def nn_interpolation(list_pts_3d, jparams):
     # d, i = kd.query(p, k=1)
 
     #convex_hull(list_pts_3d)
-    is_in_hull(list_pts_3d)
+    #is_in_hull(list_pts_3d)
     #bounding_box(list_pts_3d)
+    #get_size((1,1),(10,10),jparams)
+    #print(bounding_box(list_pts_3d)[0],bounding_box(list_pts_3d)[1])
+    #get_size(list_pts_3d,jparams)
+    lowleft = bounding_box(list_pts_3d)[0]
+    cellsize = jparams['cellsize']
+    size = get_size(list_pts_3d, jparams)
+
+    test = rowcol_to_xy(0, 0, lowleft, size[0], cellsize)
+    print(test)
     print("File written to", jparams['output-file'])
 
 
@@ -156,7 +198,7 @@ def idw_interpolation(list_pts_3d, jparams):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
-    
+
     print("File written to", jparams['output-file'])
 
 
