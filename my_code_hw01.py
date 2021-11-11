@@ -13,10 +13,28 @@ import scipy.spatial
 import startinpy 
 #-----
 
+
 #-- from the standard Python library and allowed external library
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt # external library for visualisation(developing)
 #-----
+
+
+def points2D(list_pts_3d):
+    """
+    Function that converts the 3d point list to 2d for computing convex hull, bbox, etc.
+    Can get z value(elevation) by the point index.
+    Input:
+        list_pts_3d: the list of the input points (in 3D)
+    Return:
+        2d tuple, ((x1,y1),(x2,y2)...(xn,yn)) shouldn't change the sample point
+        if need to, convert it into list/ndarray first
+    """
+    mypoints = []
+    for item in list_pts_3d:
+        mypoints.append((item[0],item[1]))
+    return tuple(mypoints)
+
 
 def convex_hull(list_pts_3d):
     """
@@ -27,17 +45,66 @@ def convex_hull(list_pts_3d):
     #rng = np.random.default_rng()
     #points = rng.random((30, 2))
     
-    mypoints = []
-    for item in list_pts_3d:
-        tmp = [item[0],item[1]]
-        mypoints.append(tmp)
-    points = np.array(mypoints)
+    points = points2D(list_pts_3d)
     hull = ConvexHull(points)
-    print(len(hull.vertices)) # index of boundary point, ordered by CCW
-    plt.plot(points[:,0], points[:,1], 'o')
+    print(hull.vertices) # index of boundary point, ordered by CCW
+    points = np.array(points)
+    #plt.plot(points[:,0], points[:,1], 'o')
+    plt.scatter(points[:,0], points[:,1],marker='.')
     plt.plot(points[hull.vertices,0], points[hull.vertices,1], 'r--', lw=2)
     plt.plot(points[hull.vertices[0],0], points[hull.vertices[0],1], 'ro') # starting point
     plt.show()
+
+
+def point_in_hull(point, hull, tolerance=1e-8):
+    """
+    Function that judges whether a point is in the convex hull.
+    Input:
+        point: a single point(x,y)
+        hull: constructed hull object
+        tolerance: 1e-8, if tolerance is infinity, all the points are considered inside the convex hull
+    """
+    return all((np.dot(eq[:-1], point) + eq[-1] <= tolerance) for eq in hull.equations)
+
+
+def is_in_hull(list_pts_3d):
+    points = points2D(list_pts_3d)
+    hull = ConvexHull(points)
+    random_points = ((0,0),(255,255),(100,100),(2,3))
+
+    points = np.array(points)
+
+    for simplex in hull.simplices:
+        plt.plot(points[simplex, 0], points[simplex, 1])
+
+    for p in random_points:
+        print(p)
+        point_is_in_hull = point_in_hull(p, hull)
+        marker = 'd' if point_is_in_hull else 'x'
+        #color = 'g' if point_is_in_hull else 'm'
+        plt.scatter(p[0], p[1], marker=marker)
+    plt.show()
+
+
+def bounding_box(list_pts_3d):
+    """
+    Function that constructs the bounding box and return the points(lowleft and upright).
+    Input:
+        list_pts_3d: the list of the input points (in 3D)
+    Return:
+        (lowleft,upright):((min_x,min_y),(max_x,max_y))
+    """
+    points = points2D(list_pts_3d)
+    min_x, min_y = np.min(points, axis=0)
+    max_x, max_y = np.max(points, axis=0)
+    lowleft = (min_x,min_y)
+    upright = (max_x,max_y)
+    return (lowleft,upright)
+    #plt.plot(points[:,0], points[:,1], 'o')
+    #plt.plot(min_x, min_y, 'ro')
+    #plt.plot(max_x, max_y, 'ro')
+    #plt.show()
+
 
 def nn_interpolation(list_pts_3d, jparams):
     """
@@ -59,9 +126,11 @@ def nn_interpolation(list_pts_3d, jparams):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
     # kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
-    convex_hull(list_pts_3d)
-    print("File written to", jparams['output-file'])
 
+    #convex_hull(list_pts_3d)
+    is_in_hull(list_pts_3d)
+    #bounding_box(list_pts_3d)
+    print("File written to", jparams['output-file'])
 
 
 def idw_interpolation(list_pts_3d, jparams):
