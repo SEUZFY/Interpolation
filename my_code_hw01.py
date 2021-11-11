@@ -8,12 +8,37 @@
 
 #-- import outside the standard Python library are not allowed, just those:
 import math
-import numpy
+import numpy as np
 import scipy.spatial
 import startinpy 
 #-----
 
+#-- from the standard Python library and allowed external library
+from scipy.spatial import ConvexHull
+import matplotlib.pyplot as plt # external library for visualisation(developing)
+#-----
 
+def convex_hull(list_pts_3d):
+    """
+    Function that constructs the convex hull of the input points
+    Input:
+        list_pts_3d: the list of the input points (in 3D)
+    """
+    #rng = np.random.default_rng()
+    #points = rng.random((30, 2))
+    
+    mypoints = []
+    for item in list_pts_3d:
+        tmp = [item[0],item[1]]
+        mypoints.append(tmp)
+    points = np.array(mypoints)
+    hull = ConvexHull(points)
+    print(len(hull.vertices)) # index of boundary point, ordered by CCW
+    plt.plot(points[:,0], points[:,1], 'o')
+    plt.plot(points[hull.vertices,0], points[hull.vertices,1], 'r--', lw=2)
+    plt.plot(points[hull.vertices[0],0], points[hull.vertices[0],1], 'ro') # starting point
+    plt.show()
+    
 
 def nn_interpolation(list_pts_3d, jparams):
     """
@@ -35,7 +60,7 @@ def nn_interpolation(list_pts_3d, jparams):
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.KDTree.query.html#scipy.spatial.KDTree.query
     # kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
-
+    convex_hull(list_pts_3d)
     print("File written to", jparams['output-file'])
 
 
