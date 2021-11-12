@@ -14,15 +14,10 @@ import startinpy
 #-----
 
 
-#-- from the standard Python library and allowed external library
-from scipy.spatial import ConvexHull
-import math
-#-----
-
-
 #-- Constant value should not be changed
 nodata_value = -9999
 #-----
+
 
 def points2D(list_pts_3d):
     """
@@ -140,13 +135,16 @@ def nn(list_pts_3d, jparams):
     ncols = get_size(list_pts_3d, jparams)[1]
     
     points = points2D(list_pts_3d)
-    hull = ConvexHull(points)
+    hull = scipy.spatial.ConvexHull(points)
+    kd = scipy.spatial.KDTree(points)
     raster = np.zeros((nrows, ncols))
     
     for i in range(nrows):
         for j in range(ncols):
-            p = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
-            raster[i][j] = 1.0 if point_in_hull(p, hull) else nodata_value
+            center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
+            index = kd.query(center_pt,p=2, k=1)[1] # return the index of the nearest neighbour point
+            value = list_pts_3d[index][2] # get the z value of the nn point
+            raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
     return raster
 
 
