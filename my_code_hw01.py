@@ -18,6 +18,8 @@ import startinpy
 nodata_value = -9999
 #-----
 
+import matplotlib.pyplot as plt
+
 
 def points2D(list_pts_3d):
     """
@@ -169,9 +171,63 @@ def nn_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
 
-    raster = nn(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = nn(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
+
+
+def idw_point_dist(pt_a, pt_b):
+    """
+    Function for calculating the distance between two points.
+    Return: float
+    """
+    return math.sqrt((pt_b[0]-pt_a[0])**2 + (pt_b[1]-pt_a[1])**2)
+
+
+def idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd):
+    """
+    Function for calculating the z value of the center point using IDW.
+    Search shape: Circle
+    Return: float
+    """
+    nearby_pts_id = [] # index of nearby points
+    for id in kd.query_ball_point(center_pt, radius):
+        nearby_pts_id.append(id)
+
+    if(len(nearby_pts_id)==0): return 0 # if no points within the given radius return 0
+    else:
+        weight_sum = 0
+        value_sum = 0
+        for id in nearby_pts_id:
+            weight_sum += math.pow(idw_point_dist(center_pt, points[id]), -power)
+            value_sum += math.pow(idw_point_dist(center_pt, points[id]), -power) * list_pts_3d[id][2]
+        return (value_sum/weight_sum) if weight_sum != 0 else 0
+
+
+def idw(list_pts_3d, jparams):
+    """
+    Function for idw interpolation.  
+    Return:
+        raster: 2D ndarray
+    """
+    cellsize = jparams['cellsize']
+    radius = jparams['radius1'] # test radius2 also
+    power = jparams['power']
+    lowleft = bounding_box(list_pts_3d)[0]
+    nrows = get_size(list_pts_3d, jparams)[0]
+    ncols = get_size(list_pts_3d, jparams)[1]
+    
+    points = points2D(list_pts_3d)
+    hull = scipy.spatial.ConvexHull(points)
+    kd = scipy.spatial.KDTree(points)
+    raster = np.zeros((nrows, ncols))
+
+    for i in range(nrows):
+        for j in range(ncols):
+            center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
+            value = idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd)
+            raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
+    return raster
 
 
 def idw_interpolation(list_pts_3d, jparams):
@@ -198,6 +254,8 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
+    raster = idw(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
