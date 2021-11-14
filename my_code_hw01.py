@@ -18,7 +18,7 @@ import startinpy
 nodata_value = -9999
 #-----
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # developing
 
 
 def points2D(list_pts_3d):
@@ -189,6 +189,7 @@ def idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd):
     Function for calculating the z value of the center point using IDW.
     Search shape: Circle
     Return: float
+    !!Need to be finished with radius2, max and min points!!
     """
     nearby_pts_id = [] # index of nearby points
     for id in kd.query_ball_point(center_pt, radius):
@@ -254,11 +255,69 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    raster = idw(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = idw(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
+def tin_area_triangle(center_pt, pt_a, pt_b):
+    """
+    Area of this triangle, using Heron's formula.
+    Input:
+        3 points. Format:(x,y)
+    Return:
+        float
+    """
+    a, b, c = idw_point_dist(center_pt, pt_a), idw_point_dist(center_pt, pt_b), idw_point_dist(pt_a, pt_b)
+    if(a+b<=c or a+c<=b or b+c<=a): return 0.0 # check whether the triangle is "legal"
+    if(a-b>=c or a-c>=b or b-c>=a): return 0.0
+    s = (a+b+c)/2
+    sum = math.sqrt(s*(s-a)*(s-b)*(s-c))
+    return sum if (a>1e-8 and b>1e-8 and c>1e-8) else 0.0
+
+
+def tin_cal(center_pt, list_pts_3d):
+    """
+    Calculate the z value of the unknown point using linear interpolation(TIN).
+    """
+    points = points2D(list_pts_3d)
+    dt = scipy.spatial.Delaunay(points)
+    if(len(dt.simplices)==0):
+        print("Delaunay triangulation of input dataset constructed error")
+        return None
+    id = scipy.spatial.Delaunay.find_simplex(dt,center_pt)
+    if(id==-1): return nodata_value # point outside of the tin
+
+    a0 = tin_area_triangle(center_pt, points[dt.simplices[id][1]], points[dt.simplices[id][2]])
+    a1 = tin_area_triangle(center_pt, points[dt.simplices[id][2]], points[dt.simplices[id][0]])
+    a2 = tin_area_triangle(center_pt, points[dt.simplices[id][0]], points[dt.simplices[id][1]])
+    total_value = 0
+    total_value += list_pts_3d[dt.simplices[id][0]][2]*a0
+    total_value += list_pts_3d[dt.simplices[id][1]][2]*a1
+    total_value += list_pts_3d[dt.simplices[id][2]][2]*a2
+
+    return total_value/(a0+a1+a2)
+
+
+def tin(list_pts_3d, jparams):
+    cellsize = jparams['cellsize']
+    lowleft = bounding_box(list_pts_3d)[0]
+    nrows = get_size(list_pts_3d, jparams)[0]
+    ncols = get_size(list_pts_3d, jparams)[1]
+    
+    points = points2D(list_pts_3d)
+    hull = scipy.spatial.ConvexHull(points)
+    kd = scipy.spatial.KDTree(points)
+    raster = np.zeros((nrows, ncols))
+
+    for i in range(nrows):
+        for j in range(ncols):
+            center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
+            value = tin_cal(center_pt, list_pts_3d)
+            raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
+    return raster
+    
+    
 def tin_interpolation(list_pts_3d, jparams):
     """
     !!! TO BE COMPLETED !!!
@@ -283,8 +342,9 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
+    raster = tin(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
-
 
 
 def laplace_interpolation(list_pts_3d, jparams):
