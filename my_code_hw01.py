@@ -342,9 +342,58 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    raster = tin(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = tin(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
+
+
+def laplace(list_pts_3d, jparams):
+    t = startinpy.DT()
+    t.insert(list_pts_3d)
+    print("# vertices:", t.number_of_vertices())
+    print("# triangles:", t.number_of_triangles())
+    print("--- /Vertices ---")
+    #for each in points:
+    #    print(each)
+    #for i in range(1,len(t.all_vertices())):
+    #    print(t.all_vertices()[i])
+    alltr = t.all_triangles()
+    print(alltr) # [[1,2,3],[2,4,3]]
+    print(t.get_point(4))
+    t.insert_one_pt(0.5, 0.5, 20)
+    print("# vertices:", t.number_of_vertices())
+    print(t.all_triangles())
+    t.remove(5)
+    print(t.all_triangles())
+
+    t.remove(4)
+    print(t.all_triangles())
+    t.insert_one_pt(0.5, 0.5, 20)
+    print(t.all_triangles())
+
+    #print(t.adjacent_vertices_to_vertex(1))
+    print(t.incident_triangles_to_vertex(4))
+
+    # 获得邻近点的索引时，需要去掉索引=0的点; 索引=0的点代表-9999
+    # 最邻近的点是从索引0开始，或者从右侧第一个点开始
+    # 当插入点周围有三角形时，邻近点的索引中没有0
+    # 对当前点的临近点: 加入数组，若数组中存在索引0，将其去除后再进行下一步操作
+
+    # t.adjacent_vertices_to_vertex(2) [0, 4, 3, 1]
+    # t.incident_triangles_to_vertex(2) [[2, 0, 4], [2, 4, 3], [2, 3, 1], [2, 1, 0]]
+    # print(t.is_triangle([1, 0, 2])) # 三角形的三个顶点必须是CCW才可以返回true
+    # 找到这个点的事件三角形，然后过滤含索引0的项，将过滤后的三角形索引列表作为计算edge值和两点距离的依据
+
+    # 过滤列表中的特定值: 目前两种想法(1)list.pop 双指针 (2)维护一个新的列表 双列表
+    list_i = [[1,2],[2,0],[2,0],[3,1],[4,2],[3,0],[5,1]]
+    j = 0 
+    for i in range(len(list_i)):
+        if 0 in list_i[j]:
+            list_i.pop(j)
+        else:
+            j += 1
+    print(list_i)
+
 
 
 def laplace_interpolation(list_pts_3d, jparams):
@@ -370,4 +419,5 @@ def laplace_interpolation(list_pts_3d, jparams):
     # you are *not* allowed to use the function for the laplace interpolation that I wrote for startinpy
     # you need to write your own code for this step
     
+    laplace(list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
