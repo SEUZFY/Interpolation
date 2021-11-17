@@ -347,32 +347,94 @@ def tin_interpolation(list_pts_3d, jparams):
     print("File written to", jparams['output-file'])
 
 
+def circum_circle(dt,tri_ids):
+    """
+    return the coordinate of the circum circle of the triangle: (x,y)
+    Input: 
+        dt: the Delaunay triangulation object
+        tri_ids [a1,a2,a3] the indices of the incident triangle of the inserted point
+    the first indice, tri_ids[0] is the inserted interpolated point
+    """
+    p0, p1, p2 = dt.get_point(tri_ids[0]), dt.get_point(tri_ids[1]), dt.get_point(tri_ids[2])
+    if(tin_area_triangle(p0,p1,p2)==0):
+        print("No triangle, please check the conditions of laplace function")
+        return None
+
+    ax, ay = p0[0], p0[1] # x, y
+    bx, by = p1[0], p1[1]
+    cx, cy = p2[0], p2[1]
+
+    # calculate center of circumcircle
+    D = 2.0 * (ax*(by-cy) + bx*(cy-ay) + cx*(ay-by))
+    if(D!=0):
+        ux = ((ax*ax+ay*ay)*(by-cy) + (bx*bx+by*by)*(cy-ay) + (cx*cx+cy*cy)*(ay-by))/D
+        uy = ((ax*ax+ay*ay)*(cx-bx) + (bx*bx+by*by)*(ax-cx) + (cx*cx+cy*cy)*(bx-ax))/D
+        center = (ux,uy)
+    else:
+        print("Calculating error, please check the circum_circle function")
+        return None
+    return center
+
+
 def laplace(list_pts_3d, jparams):
-    t = startinpy.DT()
-    t.insert(list_pts_3d)
-    print("# vertices:", t.number_of_vertices())
-    print("# triangles:", t.number_of_triangles())
-    print("--- /Vertices ---")
-    #for each in points:
-    #    print(each)
-    #for i in range(1,len(t.all_vertices())):
-    #    print(t.all_vertices()[i])
-    alltr = t.all_triangles()
-    print(alltr) # [[1,2,3],[2,4,3]]
-    print(t.get_point(4))
-    t.insert_one_pt(0.5, 0.5, 20)
-    print("# vertices:", t.number_of_vertices())
-    print(t.all_triangles())
-    t.remove(5)
-    print(t.all_triangles())
+    dt = startinpy.DT()
+    dt.insert(list_pts_3d)
+    if(len(dt.all_triangles())==0): return None
 
-    t.remove(4)
-    print(t.all_triangles())
-    t.insert_one_pt(0.5, 0.5, 20)
-    print(t.all_triangles())
+    tolerance = dt.get_snap_tolerance()
+ 
+    # dist of insert point and closest point<tolerance snap
 
-    #print(t.adjacent_vertices_to_vertex(1))
-    print(t.incident_triangles_to_vertex(4))
+    print("# vertices:", dt.number_of_vertices())
+    print("# triangles:", dt.number_of_triangles())
+    
+    dt.insert_one_pt(0.5, 0.5, 20)
+    print(dt.all_vertices())
+    insert_pt = dt.all_vertices()[-1] # get coordinate of insert_pt
+    insert_id = dt.number_of_vertices() # i.e. inital: 1,2,3 insert: 4
+
+    # get the triangle list(may include parts of the infinity triangle )
+    tri_id_list = dt.incident_triangles_to_vertex(insert_id)
+   
+    j = 0 
+    for i in range(len(tri_id_list)):
+        if 0 in tri_id_list[j]:
+            tri_id_list.pop(j)
+        else:
+            j += 1
+    print(tri_id_list)
+
+    # identify whther the insert point is located on the boundary of the convexhull
+
+
+
+
+    dt.remove(insert_id) # delete the insert point from DT 
+    print(dt.all_vertices())
+    print(dt.all_triangles())
+
+
+    #tri_ids = dt.all_triangles()[0]
+    #print(circum_circle(dt,tri_ids))
+
+
+    #alltr = t.all_triangles()
+    #print(alltr) # [[1,2,3],[2,4,3]]
+    #print(t.get_point(4))
+    #t.insert_one_pt(0.5, 0.5, 20)
+    #print("# vertices:", t.number_of_vertices())
+    #print(t.all_triangles())
+    #t.remove(5)
+    #print(t.all_triangles())
+
+    #t.remove(4)
+    #print(t.all_triangles())
+    #t.insert_one_pt(0.5, 0.5, 20)
+    #print(t.all_triangles())
+
+    ##print(t.adjacent_vertices_to_vertex(1))
+    #print(t.incident_triangles_to_vertex(4))
+    #print(t.incident_triangles_to_vertex(1))
 
     # 获得邻近点的索引时，需要去掉索引=0的点; 索引=0的点代表-9999
     # 最邻近的点是从索引0开始，或者从右侧第一个点开始
@@ -385,15 +447,14 @@ def laplace(list_pts_3d, jparams):
     # 找到这个点的事件三角形，然后过滤含索引0的项，将过滤后的三角形索引列表作为计算edge值和两点距离的依据
 
     # 过滤列表中的特定值: 目前两种想法(1)list.pop 双指针 (2)维护一个新的列表 双列表
-    list_i = [[1,2],[2,0],[2,0],[3,1],[4,2],[3,0],[5,1]]
-    j = 0 
-    for i in range(len(list_i)):
-        if 0 in list_i[j]:
-            list_i.pop(j)
-        else:
-            j += 1
-    print(list_i)
-
+    #list_i = [[1,2],[2,0],[2,0],[3,1],[4,2],[3,0],[5,1]]
+    #j = 0 
+    #for i in range(len(list_i)):
+    #    if 0 in list_i[j]:
+    #        list_i.pop(j)
+    #    else:
+    #        j += 1
+    #print(list_i)
 
 
 def laplace_interpolation(list_pts_3d, jparams):
