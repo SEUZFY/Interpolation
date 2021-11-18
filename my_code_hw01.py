@@ -376,32 +376,51 @@ def circum_circle(dt,tri_ids):
     return center
 
 
-def laplace_cal(dt, insert_pt):
+def laplace_cal(dt, hull, insert_pt):
     if(len(dt.all_triangles())==0): return nodata_value
-    
-    insert_id = dt.insert_one_pt(insert_pt[0], insert_pt[1], 0) # DO NOT forget to delete
-    
-    # if the insert point on or outside the boundary of ORIGIN convex hull
-    if(dt.is_vertex_convex_hull(insert_id)): return nodata_value 
+    if(point_in_hull(insert_pt, hull)==False): return nodata_value # point outside of the convex hull
 
-    # get the triangle list
+    insert_id = dt.insert_one_pt(insert_pt[0], insert_pt[1], 0) # DO NOT forget to delete
     tri_ids = dt.incident_triangles_to_vertex(insert_id)  
-    tri_ids.append(tri_ids[0]) # add the first item of the tri_list 
-    total_weight = 0
-    total_value = 0
-    for i in range(len(tri_ids)-1): # pairwise combination
-        center_pt = dt.get_point(tri_ids[i][0]) # find the center and the neighbour
-        neighbour_pt = dt.get_point(tri_ids[i][2])
-        dist = point_dist(center_pt, neighbour_pt)
-            
-        c1 = circum_circle(dt,tri_ids[i]) # get the Voronoi edge length
-        c2 = circum_circle(dt,tri_ids[i+1])
+    j = 0 
+    for i in range(len(tri_ids)):
+        if 0 in tri_ids[j]:
+            tri_ids.pop(j)
+        else:
+            j += 1
+    
+    if(len(tri_ids)==2): # on the boundary
+        center_pt = dt.get_point(tri_ids[0][0]) # find the center and the neighbour
+        neighbour_pt = dt.get_point(tri_ids[0][2])
+    
+        c1 = circum_circle(dt,tri_ids[0]) # get the Voronoi edge length
+        c2 = circum_circle(dt,tri_ids[1])
         edge = point_dist(c1, c2)
 
-        total_weight += edge/dist
-        total_value += (edge/dist)*dt.get_point(tri_ids[i][2])[2]
+        if(dt.remove(insert_id)==1): # delete the insert point from DT 
+            return (edge/dist)*dt.get_point(tri_ids[0][2])[2] # get the interpolation value
+        else: 
+            return nodata_value
+    else:
+        tri_ids.append(tri_ids[0]) # add the first item of the tri_list 
+        total_weight = 0
+        total_value = 0
+        for i in range(len(tri_ids)-1): # pairwise combination
+            center_pt = dt.get_point(tri_ids[i][0]) # find the center and the neighbour
+            neighbour_pt = dt.get_point(tri_ids[i][2])
+            dist = point_dist(center_pt, neighbour_pt)
 
-    return total_value/total_weight if (total_weight!=0 and dt.remove(insert_id)==1) else nodata_value
+            c1 = circum_circle(dt,tri_ids[i]) # get the Voronoi edge length
+            c2 = circum_circle(dt,tri_ids[i+1])
+            edge = point_dist(c1, c2)
+
+            total_weight += edge/dist
+            total_value += (edge/dist)*dt.get_point(tri_ids[i][2])[2]
+
+        if(dt.remove(insert_id)==1): # delete the insert point from DT 
+            return total_value/total_weight if total_weight!=0 else nodata_value
+        else:
+            return nodata_value
 
 
 def laplace(list_pts_3d, jparams):
@@ -410,6 +429,9 @@ def laplace(list_pts_3d, jparams):
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
     
+    points = points2D(list_pts_3d)
+    hull = scipy.spatial.ConvexHull(points)
+
     dt = startinpy.DT()
     dt.insert(list_pts_3d)
 
@@ -417,7 +439,7 @@ def laplace(list_pts_3d, jparams):
     for i in range(nrows):
         for j in range(ncols):
             center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
-            raster[i][j] = laplace_cal(dt,center_pt)
+            raster[i][j] = laplace_cal(dt,hull,center_pt)
             
     return raster
 
