@@ -380,7 +380,9 @@ def laplace_cal(dt, insert_pt):
     if(len(dt.all_triangles())==0): return nodata_value
     
     insert_id = dt.insert_one_pt(insert_pt[0], insert_pt[1], 0) # DO NOT forget to delete
-    if(dt.is_vertex_convex_hull(insert_id)): return nodata_value
+    
+    # if the insert point on or outside the boundary of ORIGIN convex hull
+    if(dt.is_vertex_convex_hull(insert_id)): return nodata_value 
 
     # get the triangle list
     tri_ids = dt.incident_triangles_to_vertex(insert_id)  
@@ -403,9 +405,21 @@ def laplace_cal(dt, insert_pt):
 
 
 def laplace(list_pts_3d, jparams):
+    cellsize = jparams['cellsize']
+    lowleft = bounding_box(list_pts_3d)[0]
+    nrows = get_size(list_pts_3d, jparams)[0]
+    ncols = get_size(list_pts_3d, jparams)[1]
+    
     dt = startinpy.DT()
     dt.insert(list_pts_3d)
-    print(laplace_cal(dt,(0.8,0.1)))
+
+    raster = np.zeros((nrows, ncols))
+    for i in range(nrows):
+        for j in range(ncols):
+            center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
+            raster[i][j] = laplace_cal(dt,center_pt)
+            
+    return raster
 
 
 def laplace_interpolation(list_pts_3d, jparams):
@@ -431,5 +445,6 @@ def laplace_interpolation(list_pts_3d, jparams):
     # you are *not* allowed to use the function for the laplace interpolation that I wrote for startinpy
     # you need to write your own code for this step
     
-    laplace(list_pts_3d, jparams)
+    raster = laplace(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
