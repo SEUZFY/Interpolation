@@ -376,22 +376,22 @@ def circum_circle(dt,tri_ids):
     return center
 
 
-def laplace(list_pts_3d, jparams):
-    dt = startinpy.DT()
-    dt.insert(list_pts_3d)
-    if(len(dt.all_triangles())==0): return None
+def laplace_cal(dt, insert_pt):
+    if(len(dt.all_triangles())==0): return nodata_value
 
-    tolerance = dt.get_snap_tolerance()
- 
-    # dist of insert point and closest point<tolerance snap
-
-    print("# vertices:", dt.number_of_vertices())
-    print("# triangles:", dt.number_of_triangles())
+    # if outside of convexhull
     
-    dt.insert_one_pt(0.8, 0.1, 0)
-    print(dt.all_vertices())
-    insert_pt = dt.all_vertices()[-1] # get coordinate of insert_pt
+
+    # dist of insert point and closest point<tolerance snap
+    #tolerance = dt.get_snap_tolerance()
+    #closest_id = dt.closest_point(insert_pt[0], insert_pt[1])
+    #closest_pt = dt.get_point(closest_id)
+    #if(point_dist(insert_pt, closest_pt)<=tolerance): return dt.get_point(closest_id)[2]
+
+    
+    dt.insert_one_pt(insert_pt[0], insert_pt[1], 0) # DO NOT forget to delete
     insert_id = dt.number_of_vertices() # i.e. inital: 1,2,3 insert: 4
+    print(dt.is_vertex_convex_hull(insert_id))
 
     # get the triangle list(may include parts of the infinity triangle )
     tri_ids = dt.incident_triangles_to_vertex(insert_id)  
@@ -410,8 +410,9 @@ def laplace(list_pts_3d, jparams):
         c1 = circum_circle(dt,tri_ids[0]) # get the Voronoi edge length
         c2 = circum_circle(dt,tri_ids[1])
         edge = point_dist(c1, c2)
-           
-        print((edge/dist)*dt.get_point(tri_ids[0][2])[2]) # get the interpolation value
+        
+        remove_result = dt.remove(insert_id) # delete the insert point from DT 
+        return (edge/dist)*dt.get_point(tri_ids[0][2])[2] # get the interpolation value
     else:
         tri_ids.append(tri_ids[0]) # add the first item of the tri_list 
         total_weight = 0
@@ -427,53 +428,16 @@ def laplace(list_pts_3d, jparams):
 
             total_weight += edge/dist
             total_value += (edge/dist)*dt.get_point(tri_ids[i][2])[2]
-        print(total_value/total_weight)
+
+        remove_result = dt.remove(insert_id) # delete the insert point from DT 
+        return total_value/total_weight if total_weight!=0 else nodata_value
 
 
-    remove_result = dt.remove(insert_id) # delete the insert point from DT 
-    print(remove_result) # return 1: remove successfully
 
-
-    #print(circum_circle(dt,tri_ids))
-
-
-    #alltr = t.all_triangles()
-    #print(alltr) # [[1,2,3],[2,4,3]]
-    #print(t.get_point(4))
-    #t.insert_one_pt(0.5, 0.5, 20)
-    #print("# vertices:", t.number_of_vertices())
-    #print(t.all_triangles())
-    #t.remove(5)
-    #print(t.all_triangles())
-
-    #t.remove(4)
-    #print(t.all_triangles())
-    #t.insert_one_pt(0.5, 0.5, 20)
-    #print(t.all_triangles())
-
-    ##print(t.adjacent_vertices_to_vertex(1))
-    #print(t.incident_triangles_to_vertex(4))
-    #print(t.incident_triangles_to_vertex(1))
-
-    # 获得邻近点的索引时，需要去掉索引=0的点; 索引=0的点代表-9999
-    # 最邻近的点是从索引0开始，或者从右侧第一个点开始
-    # 当插入点周围有三角形时，邻近点的索引中没有0
-    # 对当前点的临近点: 加入数组，若数组中存在索引0，将其去除后再进行下一步操作
-
-    # t.adjacent_vertices_to_vertex(2) [0, 4, 3, 1]
-    # t.incident_triangles_to_vertex(2) [[2, 0, 4], [2, 4, 3], [2, 3, 1], [2, 1, 0]]
-    # print(t.is_triangle([1, 0, 2])) # 三角形的三个顶点必须是CCW才可以返回true
-    # 找到这个点的事件三角形，然后过滤含索引0的项，将过滤后的三角形索引列表作为计算edge值和两点距离的依据
-
-    # 过滤列表中的特定值: 目前两种想法(1)list.pop 双指针 (2)维护一个新的列表 双列表
-    #list_i = [[1,2],[2,0],[2,0],[3,1],[4,2],[3,0],[5,1]]
-    #j = 0 
-    #for i in range(len(list_i)):
-    #    if 0 in list_i[j]:
-    #        list_i.pop(j)
-    #    else:
-    #        j += 1
-    #print(list_i)
+def laplace(list_pts_3d, jparams):
+    dt = startinpy.DT()
+    dt.insert(list_pts_3d)
+    print(laplace_cal(dt,(1,2)))
 
 
 def laplace_interpolation(list_pts_3d, jparams):
