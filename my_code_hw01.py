@@ -176,7 +176,7 @@ def nn_interpolation(list_pts_3d, jparams):
     print("File written to", jparams['output-file'])
 
 
-def idw_point_dist(pt_a, pt_b):
+def point_dist(pt_a, pt_b):
     """
     Function for calculating the distance between two points.
     Return: float
@@ -200,8 +200,8 @@ def idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd):
         weight_sum = 0
         value_sum = 0
         for id in nearby_pts_id:
-            weight_sum += math.pow(idw_point_dist(center_pt, points[id]), -power)
-            value_sum += math.pow(idw_point_dist(center_pt, points[id]), -power) * list_pts_3d[id][2]
+            weight_sum += math.pow(point_dist(center_pt, points[id]), -power)
+            value_sum += math.pow(point_dist(center_pt, points[id]), -power) * list_pts_3d[id][2]
         return (value_sum/weight_sum) if weight_sum != 0 else 0
 
 
@@ -260,7 +260,7 @@ def idw_interpolation(list_pts_3d, jparams):
     print("File written to", jparams['output-file'])
 
 
-def tin_area_triangle(center_pt, pt_a, pt_b):
+def area_triangle(center_pt, pt_a, pt_b):
     """
     Area of this triangle, using Heron's formula.
     Input:
@@ -268,7 +268,7 @@ def tin_area_triangle(center_pt, pt_a, pt_b):
     Return:
         float
     """
-    a, b, c = idw_point_dist(center_pt, pt_a), idw_point_dist(center_pt, pt_b), idw_point_dist(pt_a, pt_b)
+    a, b, c = point_dist(center_pt, pt_a), point_dist(center_pt, pt_b), point_dist(pt_a, pt_b)
     if(a+b<=c or a+c<=b or b+c<=a): return 0.0 # check whether the triangle is "legal"
     if(a-b>=c or a-c>=b or b-c>=a): return 0.0
     s = (a+b+c)/2
@@ -288,9 +288,9 @@ def tin_cal(center_pt, list_pts_3d):
     id = scipy.spatial.Delaunay.find_simplex(dt,center_pt)
     if(id==-1): return nodata_value # point outside of the tin
 
-    a0 = tin_area_triangle(center_pt, points[dt.simplices[id][1]], points[dt.simplices[id][2]])
-    a1 = tin_area_triangle(center_pt, points[dt.simplices[id][2]], points[dt.simplices[id][0]])
-    a2 = tin_area_triangle(center_pt, points[dt.simplices[id][0]], points[dt.simplices[id][1]])
+    a0 = area_triangle(center_pt, points[dt.simplices[id][1]], points[dt.simplices[id][2]])
+    a1 = area_triangle(center_pt, points[dt.simplices[id][2]], points[dt.simplices[id][0]])
+    a2 = area_triangle(center_pt, points[dt.simplices[id][0]], points[dt.simplices[id][1]])
     total_value = 0
     total_value += list_pts_3d[dt.simplices[id][0]][2]*a0
     total_value += list_pts_3d[dt.simplices[id][1]][2]*a1
@@ -356,7 +356,7 @@ def circum_circle(dt,tri_ids):
     the first indice, tri_ids[0] is the inserted interpolated point
     """
     p0, p1, p2 = dt.get_point(tri_ids[0]), dt.get_point(tri_ids[1]), dt.get_point(tri_ids[2])
-    if(tin_area_triangle(p0,p1,p2)==0):
+    if(area_triangle(p0,p1,p2)==0):
         print("No triangle, please check the conditions of laplace function")
         return None
 
@@ -388,33 +388,52 @@ def laplace(list_pts_3d, jparams):
     print("# vertices:", dt.number_of_vertices())
     print("# triangles:", dt.number_of_triangles())
     
-    dt.insert_one_pt(0.5, 0.5, 20)
+    dt.insert_one_pt(0.8, 0.1, 0)
     print(dt.all_vertices())
     insert_pt = dt.all_vertices()[-1] # get coordinate of insert_pt
     insert_id = dt.number_of_vertices() # i.e. inital: 1,2,3 insert: 4
 
     # get the triangle list(may include parts of the infinity triangle )
-    tri_id_list = dt.incident_triangles_to_vertex(insert_id)
-   
+    tri_ids = dt.incident_triangles_to_vertex(insert_id)  
     j = 0 
-    for i in range(len(tri_id_list)):
-        if 0 in tri_id_list[j]:
-            tri_id_list.pop(j)
+    for i in range(len(tri_ids)):
+        if 0 in tri_ids[j]:
+            tri_ids.pop(j)
         else:
             j += 1
-    print(tri_id_list)
 
-    # identify whther the insert point is located on the boundary of the convexhull
+    if(len(tri_ids)==2): # on the boundary
+        center_pt = dt.get_point(tri_ids[0][0]) # find the center and the neighbour
+        neighbour_pt = dt.get_point(tri_ids[0][2])
+        dist = point_dist(center_pt, neighbour_pt)
+
+        c1 = circum_circle(dt,tri_ids[0]) # get the Voronoi edge length
+        c2 = circum_circle(dt,tri_ids[1])
+        edge = point_dist(c1, c2)
+           
+        print((edge/dist)*dt.get_point(tri_ids[0][2])[2]) # get the interpolation value
+    else:
+        tri_ids.append(tri_ids[0]) # add the first item of the tri_list 
+        total_weight = 0
+        total_value = 0
+        for i in range(len(tri_ids)-1): # pairwise combination
+            center_pt = dt.get_point(tri_ids[i][0]) # find the center and the neighbour
+            neighbour_pt = dt.get_point(tri_ids[i][2])
+            dist = point_dist(center_pt, neighbour_pt)
+            
+            c1 = circum_circle(dt,tri_ids[i]) # get the Voronoi edge length
+            c2 = circum_circle(dt,tri_ids[i+1])
+            edge = point_dist(c1, c2)
+
+            total_weight += edge/dist
+            total_value += (edge/dist)*dt.get_point(tri_ids[i][2])[2]
+        print(total_value/total_weight)
 
 
+    remove_result = dt.remove(insert_id) # delete the insert point from DT 
+    print(remove_result) # return 1: remove successfully
 
 
-    dt.remove(insert_id) # delete the insert point from DT 
-    print(dt.all_vertices())
-    print(dt.all_triangles())
-
-
-    #tri_ids = dt.all_triangles()[0]
     #print(circum_circle(dt,tri_ids))
 
 
