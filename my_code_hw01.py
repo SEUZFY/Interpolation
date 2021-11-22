@@ -220,18 +220,19 @@ def idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_poi
     return nearby_pts_id
 
 
-def idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, min_points, power, kd):
+def idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, angle, max_points, min_points, power, kd):
     """
     Function for calculating the z value of the center point using IDW.
     Search shape: Circle
     Return: float
     !!Need to be finished with radius2, max and min points!!
     """
-    nearby_pts_id = [] # index of nearby points
-    for id in kd.query_ball_point(center_pt, radius):
-        # point is in ellipse or not 
-        nearby_pts_id.append(id)
-
+    #nearby_pts_id = [] # index of nearby points
+    #for id in kd.query_ball_point(center_pt, radius):
+    #    # point is in ellipse or not 
+    #    nearby_pts_id.append(id)
+    
+    nearby_pts_id = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
     if(len(nearby_pts_id) <= min_points): return nodata_value # if no points found return nodata
     else:
         weight_sum = 0
@@ -249,11 +250,13 @@ def idw(list_pts_3d, jparams):
         raster: 2D ndarray
     """
     cellsize = jparams['cellsize']
-    radius1 = jparams['radius1'] # test radius2 also
+    radius1 = jparams['radius1']
     radius2 = jparams['radius2']
+    max_points = jparams['max_points']
     min_points = jparams['min_points']
-
+    angle = jparams['angle']
     power = jparams['power']
+
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
@@ -266,7 +269,7 @@ def idw(list_pts_3d, jparams):
     for i in range(nrows):
         for j in range(ncols):
             center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
-            value = idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, min_points, power, kd)
+            value = idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, angle, max_points, min_points, power, kd)
             raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
     return raster
 
@@ -295,17 +298,18 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    #raster = idw(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
-    points = ((0,0),(0,1),(1,0))
-    center_pt = (1,1)
-    radius1 = 1
-    radius2 = 1
-    angle = 0 # degrees
-    max_points = min_points = 0
-    kd = scipy.spatial.KDTree(points)
-    result = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
-    print(result)
+    
+    #points = ((0,0),(0,1),(1,0))
+    #center_pt = (1,1)
+    #radius1 = 1
+    #radius2 = 1
+    #angle = 0 # degrees
+    #max_points = min_points = 0
+    #kd = scipy.spatial.KDTree(points)
+    #result = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
+    #print(result)
+    raster = idw(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
