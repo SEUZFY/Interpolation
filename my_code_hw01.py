@@ -298,18 +298,8 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    
-    #points = ((0,0),(0,1),(1,0))
-    #center_pt = (1,1)
-    #radius1 = 1
-    #radius2 = 1
-    #angle = 0 # degrees
-    #max_points = min_points = 0
-    #kd = scipy.spatial.KDTree(points)
-    #result = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
-    #print(result)
-    raster = idw(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    # raster = idw(list_pts_3d, jparams)
+    # output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -329,17 +319,16 @@ def area_triangle(center_pt, pt_a, pt_b):
     return sum if (a>1e-8 and b>1e-8 and c>1e-8) else 0.0
 
 
-def tin_cal(center_pt, list_pts_3d):
+def tin_cal(center_pt, points, list_pts_3d, dt):
     """
     Calculate the z value of the unknown point using linear interpolation(TIN).
     """
-    points = points2D(list_pts_3d)
-    dt = scipy.spatial.Delaunay(points)
+    
     if(len(dt.simplices)==0):
         print("Delaunay triangulation of input dataset constructed error")
-        return None
+        return nodata_value
     id = scipy.spatial.Delaunay.find_simplex(dt,center_pt)
-    if(id==-1): return nodata_value # point outside of the tin
+    if(id == -1): return nodata_value # point outside of the tin
 
     a0 = area_triangle(center_pt, points[dt.simplices[id][1]], points[dt.simplices[id][2]])
     a1 = area_triangle(center_pt, points[dt.simplices[id][2]], points[dt.simplices[id][0]])
@@ -353,21 +342,23 @@ def tin_cal(center_pt, list_pts_3d):
 
 
 def tin(list_pts_3d, jparams):
+
     cellsize = jparams['cellsize']
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
     
     points = points2D(list_pts_3d)
-    hull = scipy.spatial.ConvexHull(points)
+    #hull = scipy.spatial.ConvexHull(points)
+    dt = scipy.spatial.Delaunay(points)
     kd = scipy.spatial.KDTree(points)
     raster = np.zeros((nrows, ncols))
 
     for i in range(nrows):
         for j in range(ncols):
             center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
-            value = tin_cal(center_pt, list_pts_3d)
-            raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
+            raster[i][j] = tin_cal(center_pt, points, list_pts_3d, dt)
+            #raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
     return raster
     
     
@@ -395,8 +386,8 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    #raster = tin(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = tin(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
