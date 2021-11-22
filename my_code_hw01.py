@@ -89,6 +89,8 @@ def rowcol_to_xy(cur_row, cur_col, lowleft, nrows, cellsize):
     Input:    
     Return:
         the center coordinate of the cell: (x,y)
+        lowleft is for calculating the coordinates (x,y) in the origin coordinate system
+        lowleft is NOT the origin point of the origin coordinate system, the origin is: (0,0)
     """
     x = lowleft[0] + (cur_col+0.5)*cellsize
     y = lowleft[1] + (nrows-cur_row-0.5)*cellsize
@@ -184,7 +186,41 @@ def point_dist(pt_a, pt_b):
     return math.sqrt((pt_b[0]-pt_a[0])**2 + (pt_b[1]-pt_a[1])**2)
 
 
-def idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd):
+def idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd):
+    """
+    Input:
+        angle: in degrees, CCW
+    Return:
+        nearby_pts_id
+    """
+    radius = max(radius1, radius2) # radius for kd-tree search
+    a = max(radius1, radius2) # semi-major axis
+    b = min(radius1, radius2) # semi-minor axis
+    if(a==0 or b==0): return [i for i in range(len(points))] # return the index list of points
+
+    xll, yll = bounding_box(points)[0][0], bounding_box(points)[0][1]
+    x_offset, y_offset = center_pt[0] - xll, center_pt[1] - yll # coordinate system converting
+
+    rotation = np.array([[math.cos(math.radians(angle)), math.sin(math.radians(angle))], 
+                       [-math.sin(math.radians(angle)), math.cos(math.radians(angle))]])
+ 
+    nearby_pts_id = [] # index of nearby points
+    for id in kd.query_ball_point(center_pt, radius):
+        x, y = points[id][0], points[id][1] # in the original coordinate system
+        xc, yc = x - x_offset, y - y_offset # in the center_pt coordinate system
+        rotate_xy = rotation @ np.array([[xc],[yc]]) # in the center_pt-rotate coordinate system
+        xr, yr = rotate_xy[0][0], rotate_xy[1][0]
+        
+        if(max_points==0):
+            if((xr*xr)/(a*a) + (yr*yr)/(b*b) <= 1): nearby_pts_id.append(id)
+        elif(len(nearby_pts_id) <= max_points):
+            if((xr*xr)/(a*a) + (yr*yr)/(b*b) <= 1): nearby_pts_id.append(id)
+        elif(len(nearby_pts_id) > max_points): break
+    
+    return nearby_pts_id
+
+
+def idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, min_points, power, kd):
     """
     Function for calculating the z value of the center point using IDW.
     Search shape: Circle
@@ -193,9 +229,10 @@ def idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd):
     """
     nearby_pts_id = [] # index of nearby points
     for id in kd.query_ball_point(center_pt, radius):
+        # point is in ellipse or not 
         nearby_pts_id.append(id)
 
-    if(len(nearby_pts_id)==0): return 0 # if no points within the given radius return 0
+    if(len(nearby_pts_id) <= min_points): return nodata_value # if no points found return nodata
     else:
         weight_sum = 0
         value_sum = 0
@@ -212,7 +249,10 @@ def idw(list_pts_3d, jparams):
         raster: 2D ndarray
     """
     cellsize = jparams['cellsize']
-    radius = jparams['radius1'] # test radius2 also
+    radius1 = jparams['radius1'] # test radius2 also
+    radius2 = jparams['radius2']
+    min_points = jparams['min_points']
+
     power = jparams['power']
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
@@ -226,7 +266,7 @@ def idw(list_pts_3d, jparams):
     for i in range(nrows):
         for j in range(ncols):
             center_pt = rowcol_to_xy(i, j, lowleft, nrows, cellsize)
-            value = idw_circle_cal(center_pt, points, list_pts_3d, radius, power, kd)
+            value = idw_circle_cal(center_pt, points, list_pts_3d, radius1, radius2, min_points, power, kd)
             raster[i][j] = value if point_in_hull(center_pt, hull) else nodata_value # assign the value
     return raster
 
@@ -257,6 +297,15 @@ def idw_interpolation(list_pts_3d, jparams):
 
     #raster = idw(list_pts_3d, jparams)
     #output_raster(raster, list_pts_3d, jparams)
+    points = ((0,0),(0,1),(1,0))
+    center_pt = (1,1)
+    radius1 = 1
+    radius2 = 1
+    angle = 0 # degrees
+    max_points = min_points = 0
+    kd = scipy.spatial.KDTree(points)
+    result = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
+    print(result)
     print("File written to", jparams['output-file'])
 
 
@@ -467,6 +516,6 @@ def laplace_interpolation(list_pts_3d, jparams):
     # you are *not* allowed to use the function for the laplace interpolation that I wrote for startinpy
     # you need to write your own code for this step
     
-    raster = laplace(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = laplace(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
