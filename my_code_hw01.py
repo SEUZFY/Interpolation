@@ -76,8 +76,8 @@ def get_size(list_pts_3d, jparams):
     cellsize = jparams['cellsize'] # get cellsize from the json file
     lowleft = bounding_box(list_pts_3d)[0]
     upright = bounding_box(list_pts_3d)[1]  
-    cal_row = (upright[0]-lowleft[0])/cellsize # x-axis
-    cal_col = (upright[1]-lowleft[1])/cellsize # y-axis
+    cal_col = (upright[0]-lowleft[0])/cellsize 
+    cal_row = (upright[1]-lowleft[1])/cellsize
     nrows = math.ceil(cal_row) # round-up
     ncols = math.ceil(cal_col) # round-up
     return (nrows,ncols)
@@ -302,8 +302,8 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    raster = idw(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = idw(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -390,8 +390,8 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    #raster = tin(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = tin(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
