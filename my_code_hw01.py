@@ -186,7 +186,7 @@ def point_dist(pt_a, pt_b):
     return math.sqrt((pt_b[0]-pt_a[0])**2 + (pt_b[1]-pt_a[1])**2)
 
 
-def idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd):
+def idw_nearby(center_pt, points, radius1, radius2, angle, max_points, min_points, kd):
     """
     Input:
         angle: in degrees, CCW
@@ -211,10 +211,14 @@ def idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_poi
         rotate_xy = rotation @ np.array([[xc],[yc]]) # in the center_pt-rotate coordinate system
         xr, yr = rotate_xy[0][0], rotate_xy[1][0]
         
-        if(max_points==0):
+        if(max_points==0 and radius1 >= radius2):
             if((xr*xr)/(a*a) + (yr*yr)/(b*b) <= 1): nearby_pts_id.append(id)
-        elif(len(nearby_pts_id) <= max_points):
+        elif(max_points==0 and radius1 < radius2):
+            if((yr*yr)/(a*a) + (xr*xr)/(b*b) <= 1): nearby_pts_id.append(id)
+        elif(len(nearby_pts_id) <= max_points and radius1 >= radius2):
             if((xr*xr)/(a*a) + (yr*yr)/(b*b) <= 1): nearby_pts_id.append(id)
+        elif(len(nearby_pts_id) <= max_points and radius1 < radius2):
+            if((yr*yr)/(a*a) + (xr*xr)/(b*b) <= 1): nearby_pts_id.append(id)
         elif(len(nearby_pts_id) > max_points): break
     
     return nearby_pts_id
@@ -230,7 +234,7 @@ def idw_circle_cal(dt, center_pt, points, list_pts_3d, radius1, radius2, angle, 
     find = scipy.spatial.Delaunay.find_simplex(dt,center_pt)
     if(find == -1): return nodata_value # point outside of the tin(outside of the convex hull)
 
-    nearby_pts_id = idw_variants(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
+    nearby_pts_id = idw_nearby(center_pt, points, radius1, radius2, angle, max_points, min_points, kd)
     if(len(nearby_pts_id) <= min_points): return nodata_value # if no points found return nodata
     else:
         weight_sum = 0
@@ -298,8 +302,8 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    # raster = idw(list_pts_3d, jparams)
-    # output_raster(raster, list_pts_3d, jparams)
+    raster = idw(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -386,8 +390,8 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    raster = tin(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = tin(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
