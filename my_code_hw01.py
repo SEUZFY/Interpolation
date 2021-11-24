@@ -198,9 +198,10 @@ def idw_nearby(center_pt, points, radius1, radius2, angle, max_points, min_point
     b = min(radius1, radius2) # semi-minor axis
     if(a==0 or b==0): return [i for i in range(len(points))] # return the index list of points
 
-    xll, yll = bounding_box(points)[0][0], bounding_box(points)[0][1]
-    x_offset, y_offset = center_pt[0] - xll, center_pt[1] - yll # coordinate system converting
+    #xll, yll = bounding_box(points)[0][0], bounding_box(points)[0][1]
+    #x_offset, y_offset = center_pt[0] - xll, center_pt[1] - yll # coordinate system converting
 
+    x_offset, y_offset = center_pt[0], center_pt[1]
     rotation = np.array([[math.cos(math.radians(angle)), math.sin(math.radians(angle))], 
                        [-math.sin(math.radians(angle)), math.cos(math.radians(angle))]])
  
@@ -302,8 +303,8 @@ def idw_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # i = kd.query_ball_point(p, radius)
 
-    #raster = idw(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = idw(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -390,8 +391,8 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    raster = tin(list_pts_3d, jparams)
-    output_raster(raster, list_pts_3d, jparams)
+    #raster = tin(list_pts_3d, jparams)
+    #output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
