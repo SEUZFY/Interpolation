@@ -18,8 +18,6 @@ import startinpy
 nodata_value = -9999
 #-----
 
-import matplotlib.pyplot as plt # developing
-
 
 def points2D(list_pts_3d):
     """
@@ -73,7 +71,7 @@ def get_size(list_pts_3d, jparams):
     Return:
         (nrows,ncols)
     """
-    cellsize = jparams['cellsize'] # get cellsize from the json file
+    cellsize = abs(jparams['cellsize']) # get cellsize from the json file
     lowleft = bounding_box(list_pts_3d)[0]
     upright = bounding_box(list_pts_3d)[1]  
     cal_col = (upright[0]-lowleft[0])/cellsize 
@@ -108,7 +106,7 @@ def output_raster(raster, list_pts_3d, jparams):
     nrows = len(raster)
     xllcorner = bounding_box(list_pts_3d)[0][0]
     yllcorner = bounding_box(list_pts_3d)[0][1]
-    cellsize = jparams['cellsize']
+    cellsize = abs(jparams['cellsize'])
     file_nm = jparams['output-file']
 
     # output attribute information
@@ -133,7 +131,7 @@ def nn(list_pts_3d, jparams):
     Return:
         raster: 2D ndarray
     """
-    cellsize = jparams['cellsize']
+    cellsize = abs(jparams['cellsize'])
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
@@ -173,8 +171,8 @@ def nn_interpolation(list_pts_3d, jparams):
     # kd = scipy.spatial.KDTree(list_pts)
     # d, i = kd.query(p, k=1)
 
-    #raster = nn(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = nn(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -252,13 +250,16 @@ def idw(list_pts_3d, jparams):
     Return:
         raster: 2D ndarray
     """
-    cellsize = jparams['cellsize']
-    radius1 = jparams['radius1']
-    radius2 = jparams['radius2']
-    max_points = jparams['max_points']
-    min_points = jparams['min_points']
+    cellsize = abs(jparams['cellsize'])
+    radius1 = abs(jparams['radius1'])
+    radius2 = abs(jparams['radius2'])
+    max_points = abs(jparams['max_points'])
+    min_points = abs(jparams['min_points'])
     angle = jparams['angle']
     power = jparams['power']
+
+    max_points = max(min_points,max_points) # robust
+    min_points = min(min_points,max_points)
 
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
@@ -348,7 +349,7 @@ def tin_cal(center_pt, points, list_pts_3d, dt):
 
 def tin(list_pts_3d, jparams):
 
-    cellsize = jparams['cellsize']
+    cellsize = abs(jparams['cellsize'])
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
@@ -369,7 +370,6 @@ def tin(list_pts_3d, jparams):
     
 def tin_interpolation(list_pts_3d, jparams):
     """
-    !!! TO BE COMPLETED !!!
      
     Function that writes the output raster with linear in TIN interpolation
      
@@ -391,8 +391,8 @@ def tin_interpolation(list_pts_3d, jparams):
     # you need to write your own code for this step
     # but you can of course read the code [dt.interpolate_tin_linear(x, y)]
     
-    #raster = tin(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = tin(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
 
 
@@ -426,6 +426,15 @@ def circum_circle(dt,tri_ids):
 
 
 def laplace_cal(dt, hull, insert_pt):
+    """
+    Calculate the value of each cell.
+    Input:
+        dt: Delaunay triangulation
+        hull: Convex hull
+        insert_pt: interpolation point
+
+    """
+
     if(len(dt.all_triangles())==0): return nodata_value
     if(point_in_hull(insert_pt, hull)==False): return nodata_value # point outside of the convex hull
 
@@ -473,7 +482,10 @@ def laplace_cal(dt, hull, insert_pt):
 
 
 def laplace(list_pts_3d, jparams):
-    cellsize = jparams['cellsize']
+    """
+    laplace interpolation.
+    """
+    cellsize = abs(jparams['cellsize'])
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
     ncols = get_size(list_pts_3d, jparams)[1]
@@ -516,6 +528,6 @@ def laplace_interpolation(list_pts_3d, jparams):
     # you are *not* allowed to use the function for the laplace interpolation that I wrote for startinpy
     # you need to write your own code for this step
     
-    #raster = laplace(list_pts_3d, jparams)
-    #output_raster(raster, list_pts_3d, jparams)
+    raster = laplace(list_pts_3d, jparams)
+    output_raster(raster, list_pts_3d, jparams)
     print("File written to", jparams['output-file'])
