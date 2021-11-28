@@ -1,9 +1,9 @@
 #-- my_code_hw01.py
 #-- hw01 GEO1015.2021
-#-- [YOUR NAME]
-#-- [YOUR STUDENT NUMBER] 
 #-- Yitong Xia
 #-- 5445825
+#-- Fengyan Zhang
+#-- 5462150
 
 
 #-- import outside the standard Python library are not allowed, just those:
@@ -280,8 +280,8 @@ def idw(list_pts_3d, jparams):
 
 
 def idw_interpolation(list_pts_3d, jparams):
-    """
-     
+    """  
+
     Function that writes the output raster with IDW
      
     Input:
@@ -346,7 +346,9 @@ def tin_cal(center_pt, points, list_pts_3d, dt):
 
 
 def tin(list_pts_3d, jparams):
-
+    """
+    Linear tin interpolation.
+    """
     cellsize = abs(jparams['cellsize'])
     lowleft = bounding_box(list_pts_3d)[0]
     nrows = get_size(list_pts_3d, jparams)[0]
