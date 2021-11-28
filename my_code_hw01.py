@@ -152,7 +152,6 @@ def nn(list_pts_3d, jparams):
 
 def nn_interpolation(list_pts_3d, jparams):
     """
-    !!! TO BE COMPLETED !!!
      
     Function that writes the output raster with nearest neighbour interpolation
      
@@ -282,7 +281,6 @@ def idw(list_pts_3d, jparams):
 
 def idw_interpolation(list_pts_3d, jparams):
     """
-    !!! TO BE COMPLETED !!!
      
     Function that writes the output raster with IDW
      
@@ -507,7 +505,6 @@ def laplace(list_pts_3d, jparams):
 
 def laplace_interpolation(list_pts_3d, jparams):
     """
-    !!! TO BE COMPLETED !!!
      
     Function that writes the output raster with Laplace interpolation
      
