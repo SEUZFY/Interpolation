@@ -2,8 +2,8 @@
 #-- hw01 GEO1015.2021
 #-- [YOUR NAME]
 #-- [YOUR STUDENT NUMBER] 
-#-- [YOUR NAME]
-#-- [YOUR STUDENT NUMBER] 
+#-- Yitong Xia
+#-- 5445825
 
 
 #-- import outside the standard Python library are not allowed, just those:
