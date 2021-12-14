@@ -1,10 +1,5 @@
 
 # -- my_code_hw01.py
-# -- hw01 GEO1015.2021
-# -- [YOUR NAME]
-# -- [YOUR STUDENT NUMBER]
-# -- [YOUR NAME]
-# -- [YOUR STUDENT NUMBER]
 
 
 # -- import outside the standard Python library are not allowed, just those:
