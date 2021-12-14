@@ -1,9 +1,4 @@
 #-- my_code_hw01.py
-#-- hw01 GEO1015.2021
-#-- Yitong Xia
-#-- 5445825
-#-- Fengyan Zhang
-#-- 5462150
 
 
 #-- import outside the standard Python library are not allowed, just those:
